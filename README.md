@@ -11,7 +11,7 @@ A compact status line for [Claude Code](https://claude.com/claude-code), for Win
 - The 5h label becomes a countdown to the window reset (e.g. `2h14m 37%`), falling back to `5h`.
 - Percentages: turquoise < 60%, yellow ≥ 60%, orange ≥ 80%, bold red ≥ 90%.
 - Separators are dark grey ` | `; colours are 256-colour codes; `NO_COLOR` disables colour.
-- Team is your Claude organization name, read from `oauthAccount.organizationName` in `~/.claude.json` (it isn't in the status line JSON). It's dropped when logged out or using an API key.
+- Team is your Claude organization name on Team/Enterprise plans, and `Personal` on personal plans (Pro, Max, ...), whose orgs are auto-named `<email>'s Organization`. It's read from `oauthAccount.organizationName` / `organizationType` in `~/.claude.json` (it isn't in the status line JSON), and dropped when logged out or using an API key.
 - Segments with no data (e.g. no git repo, no rate-limit info yet) are dropped.
 - Prints a second line containing only U+200B (zero width space) as a spacer row.
 

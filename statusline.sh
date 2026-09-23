@@ -64,9 +64,13 @@ git_branch() {
   [ -n "$b" ] && echo "$b" || field '.workspace.git_worktree'
 }
 
-# Claude org name from the local login (not in the statusline JSON).
+# Claude org from the local login (not in the statusline JSON). Team/Enterprise
+# orgs show their name; personal plans (pro, max, ...) show "Personal".
 team() {
-  jq -r '.oauthAccount.organizationName // empty' "$HOME/.claude.json" 2>/dev/null
+  jq -r '.oauthAccount
+    | if (.organizationName // "") == "" then empty
+      elif (.organizationType // "") | test("team|enterprise"; "i") then .organizationName
+      else "Personal" end' "$HOME/.claude.json" 2>/dev/null
 }
 
 label_5h=$(until_reset "$(field '.rate_limits.five_hour.resets_at')")
