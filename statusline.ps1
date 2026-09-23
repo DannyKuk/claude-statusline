@@ -255,6 +255,7 @@ $C_DIR    = __c '38;5;252'  # near-white
 $C_BRANCH = __c '38;5;108'  # muted git green
 $C_SEP    = __c '38;5;240'  # dark grey, recedes
 $C_LABEL  = __c '38;5;244'  # grey, quieter than the number it labels
+$C_TEAM   = __c '38;5;141'  # soft purple
 
 # Used-percentage ramp: turquoise while healthy, warming to red at the wall.
 # Thresholds read as USED, so for both figures higher is worse.
@@ -281,6 +282,17 @@ function __pctSeg([string]$label, [string]$raw) {
   return (__seg $C_LABEL ($label + ' ')) + (__seg (__pctColor $n) ("$n" + '%'))
 }
 
+# Claude org (team) name from the local login. It is not in the statusline
+# JSON, so read it from ~/.claude.json; '' when logged out or on an API key.
+function __team() {
+  $h = $env:USERPROFILE
+  if (-not $h) { $h = $env:HOME }
+  try {
+    $cfg = Get-Content -Raw (Join-Path $h '.claude.json') | ConvertFrom-Json
+    return [string](__get $cfg 'oauthAccount.organizationName')
+  } catch { return '' }
+}
+
 # Label the 5-hour figure with how long until the window resets rather than the
 # window's length. Falls back to the static "5h" when resets_at is absent or
 # already past: rate_limits appears only for Pro/Max after the first API
@@ -294,7 +306,8 @@ foreach ($__p in @(
   (__seg $C_DIR    (__basename (__field 'workspace.current_dir'))),
   (__seg $C_BRANCH (__gitBranch)),
   (__pctSeg $__5h (__field 'rate_limits.five_hour.used_percentage')),
-  (__pctSeg 'ctx' (__field 'context_window.used_percentage'))
+  (__pctSeg 'ctx' (__field 'context_window.used_percentage')),
+  (__seg $C_TEAM   (__team))
 )) { if ($__p) { $__parts.Add($__p) } }
 
 __write ($__parts -join (__seg $C_SEP ' | '))
