@@ -69,7 +69,7 @@ git_branch() {
 team() {
   jq -r '.oauthAccount
     | if (.organizationName // "") == "" then empty
-      elif (.organizationType // "") | test("team|enterprise") then .organizationName
+      elif (.organizationType // "") | test("team|enterprise"; "i") then .organizationName
       else "Personal" end' "$HOME/.claude.json" 2>/dev/null
 }
 
