@@ -1,6 +1,8 @@
 Claude Code status line (from Danny's Windows machine)
 ======================================================
 
+![Status line in Claude Code](screenshot.png)
+
 statusline.ps1 is the working PowerShell status line script. On Windows it is wired
 up in ~/.claude/settings.json as:
 
