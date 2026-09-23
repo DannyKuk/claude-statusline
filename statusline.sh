@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Statusline script (bash port of statusline.ps1)
-# model | folder | git branch | 5h rate-limit usage | context usage
+# model | folder | git branch | 5h rate-limit usage | context usage | team
 input=$(cat)
 
 field() { jq -r "$1 // empty" <<<"$input" 2>/dev/null; }
@@ -12,6 +12,7 @@ C_DIR=$(c '38;5;252')     # near-white
 C_BRANCH=$(c '38;5;108')  # muted git green
 C_SEP=$(c '38;5;240')     # dark grey, recedes
 C_LABEL=$(c '38;5;244')   # grey, quieter than the number it labels
+C_TEAM=$(c '38;5;141')    # soft purple
 
 ESC=$'\033'
 seg() {
@@ -63,6 +64,11 @@ git_branch() {
   [ -n "$b" ] && echo "$b" || field '.workspace.git_worktree'
 }
 
+# Claude org name from the local login (not in the statusline JSON).
+team() {
+  jq -r '.oauthAccount.organizationName // empty' "$HOME/.claude.json" 2>/dev/null
+}
+
 label_5h=$(until_reset "$(field '.rate_limits.five_hour.resets_at')")
 [ -z "$label_5h" ] && label_5h='5h'
 
@@ -72,6 +78,7 @@ parts=(
   "$(seg "$C_BRANCH" "$(git_branch)")"
   "$(pct_seg "$label_5h" "$(field '.rate_limits.five_hour.used_percentage')")"
   "$(pct_seg 'ctx' "$(field '.context_window.used_percentage')")"
+  "$(seg "$C_TEAM" "$(team)")"
 )
 
 sep=$(seg "$C_SEP" ' | ')
