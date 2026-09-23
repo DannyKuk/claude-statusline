@@ -289,7 +289,12 @@ function __team() {
   if (-not $h) { $h = $env:HOME }
   try {
     $cfg = Get-Content -Raw (Join-Path $h '.claude.json') | ConvertFrom-Json
-    return [string](__get $cfg 'oauthAccount.organizationName')
+    $org  = [string](__get $cfg 'oauthAccount.organizationName')
+    $type = [string](__get $cfg 'oauthAccount.organizationType')
+    if (-not $org) { return '' }
+    # Team/Enterprise orgs show their name; personal plans (pro, max, ...) show "Personal".
+    if ($type -match 'team|enterprise') { return $org }
+    return 'Personal'
   } catch { return '' }
 }
 
