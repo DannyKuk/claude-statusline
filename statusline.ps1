@@ -256,6 +256,7 @@ $C_BRANCH = __c '38;5;108'  # muted git green
 $C_SEP    = __c '38;5;240'  # dark grey, recedes
 $C_LABEL  = __c '38;5;244'  # grey, quieter than the number it labels
 $C_TEAM   = __c '38;5;141'  # soft purple
+$C_ENERGY = __c '38;5;179'  # soft amber
 
 # Used-percentage ramp: turquoise while healthy, warming to red at the wall.
 # Thresholds read as USED, so for both figures higher is worse.
@@ -298,6 +299,90 @@ function __team() {
   } catch { return '' }
 }
 
+# Rough electricity use of this session, in Wh (as an invariant-culture string,
+# or '' with no transcript). Not a measurement: Anthropic publishes no energy
+# figures, so this applies public per-token estimates (Google/OpenAI
+# disclosures, Epoch AI, TokenPowerBench) to the token counts in the session
+# transcript, subagent transcripts included. Treat it as an order of magnitude.
+# Cached by total transcript size so an idle refresh doesn't re-parse a long
+# session.
+function __modelScale([string]$m) {
+  if ($m -match 'haiku') { return 0.25 }
+  if ($m -match 'sonnet') { return 0.5 }
+  if ($m -match 'fable|mythos') { return 1.5 }
+  return 1.0
+}
+function __energyWh() {
+  $t = __field 'transcript_path'
+  if (-not $t -or -not (Test-Path -LiteralPath $t -PathType Leaf)) { return '' }
+  $inv = [System.Globalization.CultureInfo]::InvariantCulture
+  $files = @(Get-Item -LiteralPath $t)
+  $dir = [System.IO.Path]::ChangeExtension($t, $null)
+  if (Test-Path -LiteralPath $dir -PathType Container) {
+    $files += @(Get-ChildItem -LiteralPath $dir -Recurse -File -Filter '*.jsonl')
+  }
+  $size = [string](($files | Measure-Object -Property Length -Sum).Sum)
+
+  $sid = __field 'session_id'
+  if (-not $sid) { $sid = 'x' }
+  $cache = Join-Path ([System.IO.Path]::GetTempPath()) "statusline-energy-$sid.txt"
+  try {
+    $c = (Get-Content -Raw -LiteralPath $cache).Trim().Split(' ')
+    if ($c.Length -eq 2 -and $c[0] -eq $size -and $c[1]) { return $c[1] }
+  } catch {}
+
+  # A streamed response can be logged more than once, so the last entry per
+  # message id wins. Case-sensitive keys, unlike a PowerShell hashtable.
+  $msgs = New-Object 'System.Collections.Generic.Dictionary[string,object]'
+  foreach ($f in $files) {
+    foreach ($line in [System.IO.File]::ReadLines($f.FullName)) {
+      if ($line.IndexOf('"usage"') -lt 0) { continue }  # cheap pre-filter
+      try { $e = $line | ConvertFrom-Json } catch { continue }
+      if ($null -eq $e -or (__get $e 'type') -ne 'assistant') { continue }
+      $m = __get $e 'message'
+      if (-not (__get $m 'usage')) { continue }
+      $id = [string](__get $m 'id')
+      if (-not $id) { $id = [string](__get $e 'uuid') }
+      $msgs[$id] = $m
+    }
+  }
+
+  # kWh per million tokens for an Opus-class model, including data-centre
+  # overhead (PUE). Output (decode) dominates; prefill is far cheaper per token
+  # and cache reads skip most of the compute. Smaller models scale down.
+  $fallback = __field 'model.id'
+  $kwh = 0.0
+  foreach ($m in $msgs.Values) {
+    $u = $m.usage
+    $model = [string](__get $m 'model')
+    if (-not $model) { $model = $fallback }
+    $kwh += ( [double](__get $u 'output_tokens') * 1.0 `
+            + [double](__get $u 'input_tokens') * 0.2 `
+            + [double](__get $u 'cache_creation_input_tokens') * 0.25 `
+            + [double](__get $u 'cache_read_input_tokens') * 0.02 ) / 1000000 * (__modelScale $model)
+  }
+  $wh = ($kwh * 1000).ToString('R', $inv)
+  try { [System.IO.File]::WriteAllText($cache, "$size $wh") } catch {}
+  return $wh
+}
+
+# "<bolt> ~12 Wh est. (~0.8 <battery>)", the battery being a ~15 Wh smartphone
+# charge. Non-ASCII glyphs are built from code points (see __write above).
+function __energySeg() {
+  $v = __energyWh
+  if (-not $v) { return '' }
+  $inv = [System.Globalization.CultureInfo]::InvariantCulture
+  $wh = [double]::Parse($v, $inv)
+  if ($wh -ge 1000)   { $amt = ($wh / 1000).ToString('F2', $inv) + ' kWh' }
+  elseif ($wh -ge 10) { $amt = $wh.ToString('F0', $inv) + ' Wh' }
+  else                { $amt = $wh.ToString('F1', $inv) + ' Wh' }
+  $phones = ($wh / 15).ToString('F1', $inv)
+  $bolt = [string][char]0x26A1
+  $approx = [string][char]0x2248
+  $battery = [char]::ConvertFromUtf32(0x1F50B)
+  return (__seg $C_ENERGY ($bolt + ' ~' + $amt)) + (__seg $C_LABEL (' est. (' + $approx + $phones + ' ' + $battery + ')'))
+}
+
 # Label the 5-hour figure with how long until the window resets rather than the
 # window's length. Falls back to the static "5h" when resets_at is absent or
 # already past: rate_limits appears only for Pro/Max after the first API
@@ -312,7 +397,8 @@ foreach ($__p in @(
   (__seg $C_BRANCH (__gitBranch)),
   (__pctSeg $__5h (__field 'rate_limits.five_hour.used_percentage')),
   (__pctSeg 'ctx' (__field 'context_window.used_percentage')),
-  (__seg $C_TEAM   (__team))
+  (__seg $C_TEAM   (__team)),
+  (__energySeg)
 )) { if ($__p) { $__parts.Add($__p) } }
 
 __write ($__parts -join (__seg $C_SEP ' | '))
