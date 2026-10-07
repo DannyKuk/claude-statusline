@@ -2,9 +2,7 @@
 
 A compact status line for [Claude Code](https://claude.com/claude-code), for Windows (PowerShell) and macOS/Linux (bash).
 
-![Status line in Claude Code](screenshot.png)
-
-[<!-- Demo video (26 s, with sound): edit this file on GitHub and drag claude-statusline-demo.mp4 onto this line. GitHub uploads it and replaces it with the video link. -->](https://github.com/user-attachments/assets/873068f4-a392-4352-8bb1-3698f6a45306)
+https://github.com/user-attachments/assets/873068f4-a392-4352-8bb1-3698f6a45306
 
 ## What it shows
 
