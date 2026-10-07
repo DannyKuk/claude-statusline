@@ -1,6 +1,6 @@
 ---
 name: slconfig
-description: Use when the user runs /slconfig, or asks to show, hide, list or turn on/off segments of the claude-statusline status line (model, folder, branch, 5h, ctx, team, energy).
+description: Use when the user runs /slconfig, or asks to show, hide, list or turn on/off segments of the claude-statusline status line (model, folder, branch, 5h, weekly, ctx, team, energy).
 argument-hint: "[segment...]"
 ---
 
@@ -30,6 +30,7 @@ is not one. No file, or an empty `hide =`, shows everything.
 | `folder` | current folder                              |
 | `branch` | git branch and its state (`*`, ↑/↓)          |
 | `5h`     | 5-hour rate limit usage / reset countdown   |
+| `weekly` | weekly rate limit, only shown from 80% (`7d`) |
 | `ctx`    | context window usage                        |
 | `team`   | Claude organization (or "Personal")         |
 | `energy` | session energy estimate (⚡ Wh, 🔋)          |
@@ -48,8 +49,9 @@ is not one. No file, or an empty `hide =`, shows everything.
 ## Updating the file
 
 1. Map each requested segment to a name from the table (case-insensitive;
-   "5 hour limit" is `5h`, "context" is `ctx`). If any can't be mapped, change
-   nothing and create nothing: say which are unknown and list the valid names.
+   "5 hour limit" is `5h`, "weekly limit" or "7d" is `weekly`, "context" is
+   `ctx`). If any can't be mapped, change nothing and create nothing: say
+   which are unknown and list the valid names.
    A segment named twice counts once.
 2. Read the current hidden set from all `hide` lines (lower-cased, unknown
    names dropped; no file means nothing hidden), then apply the toggle, hide
@@ -63,7 +65,7 @@ is not one. No file, or an empty `hide =`, shows everything.
    # Settings for claude-statusline
    # https://github.com/DannyKuk/claude-statusline
    #
-   # Segments: model, folder, branch, 5h, ctx, team, energy
+   # Segments: model, folder, branch, 5h, weekly, ctx, team, energy
    # List the ones to hide, comma-separated, e.g.  hide = energy, team
    hide =
    ```
@@ -72,6 +74,6 @@ is not one. No file, or an empty `hide =`, shows everything.
    inline comment included; delete any other `hide` lines; leave every other
    line exactly as it is. No `hide` line yet: append one. Showing everything
    leaves `hide =` empty; keep the file.
-6. Reply with all seven segments as on/off in one line (e.g.
+6. Reply with all eight segments as on/off in one line (e.g.
    `model on · ... · energy off`), and that it applies on the status line's
    next refresh.
