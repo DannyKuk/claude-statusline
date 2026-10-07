@@ -28,7 +28,7 @@ is not one. No file, or an empty `hide =`, shows everything.
 |----------|---------------------------------------------|
 | `model`  | model name                                  |
 | `folder` | current folder                              |
-| `branch` | git branch                                  |
+| `branch` | git branch and its state (`*`, ↑/↓)          |
 | `5h`     | 5-hour rate limit usage / reset countdown   |
 | `ctx`    | context window usage                        |
 | `team`   | Claude organization (or "Personal")         |
