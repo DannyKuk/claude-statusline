@@ -6,11 +6,15 @@ input=$(cat)
 field() { jq -r "$1 // empty" <<<"$input" 2>/dev/null; }
 
 # ---- settings -------------------------------------------------------------
-# Segments named under "hide" in ~/.claude/statusline.json (or
-# $STATUSLINE_CONFIG) are skipped, not just blanked, so hiding "energy" also
-# skips the transcript parse. A missing or broken file shows everything.
-config=${STATUSLINE_CONFIG:-$HOME/.claude/statusline.json}
-hidden=$'\n'$(jq -r '[.hide] | flatten | .[] | strings | ascii_downcase' "$config" 2>/dev/null)$'\n'
+# Segments named on a "hide = a, b" line in ~/.claude/claude-statusline.conf
+# (or $STATUSLINE_CONFIG) are skipped, not just blanked, so hiding "energy" also
+# skips the transcript parse. "#" starts a comment. No file shows everything.
+config=${STATUSLINE_CONFIG:-$HOME/.claude/claude-statusline.conf}
+hidden=$'\n'$(awk '{ l = tolower($0) } l ~ /^[[:space:]]*hide[[:space:]]*=/ {
+    sub(/^[^=]*=/, "", l); sub(/#.*/, "", l)
+    n = split(l, a, ",")
+    for (i = 1; i <= n; i++) { gsub(/[[:space:]]/, "", a[i]); if (a[i] != "") print a[i] }
+  }' "$config" 2>/dev/null)$'\n'
 shown() { [[ $hidden != *$'\n'"$1"$'\n'* ]]; }
 
 # ---- palette (256-colour; NO_COLOR disables) ------------------------------

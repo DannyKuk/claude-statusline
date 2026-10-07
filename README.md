@@ -18,13 +18,17 @@ A compact status line for [Claude Code](https://claude.com/claude-code), for Win
 
 ## Settings
 
-To turn segments off, list them under `hide` in `~/.claude/statusline.json` (`%USERPROFILE%\.claude\statusline.json` on Windows):
+Optional. To turn segments off, copy [`claude-statusline.conf`](claude-statusline.conf) to `~/.claude/claude-statusline.conf` (`%USERPROFILE%\.claude\claude-statusline.conf` on Windows) and list them on the `hide` line:
 
-```json
-{ "hide": ["energy", "team"] }
+```ini
+hide = energy, team
 ```
 
-Segment names: `model`, `folder`, `branch`, `5h`, `ctx`, `team`, `energy`. Hidden segments aren't computed at all, so hiding `energy` also skips reading the transcript. Without the file, or if it isn't valid JSON, everything is shown. Changes apply on the next refresh. `STATUSLINE_CONFIG=<path>` reads a different file.
+Segment names: `model`, `folder`, `branch`, `5h`, `ctx`, `team`, `energy` (case doesn't matter; `#` starts a comment). Hidden segments aren't computed at all, so hiding `energy` also skips reading the transcript. Without the file everything is shown. Changes apply on the next refresh. `STATUSLINE_CONFIG=<path>` reads a different file.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/DannyKuk/claude-statusline/main/claude-statusline.conf -o ~/.claude/claude-statusline.conf
+```
 
 ## Install
 

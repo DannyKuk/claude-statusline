@@ -259,19 +259,23 @@ $C_TEAM   = __c '38;5;141'  # soft purple
 $C_ENERGY = __c '38;5;179'  # soft amber
 
 # ---- settings -------------------------------------------------------------
-# Segments named under "hide" in ~/.claude/statusline.json (or
-# $env:STATUSLINE_CONFIG) are skipped, not just blanked, so hiding "energy"
-# also skips the transcript parse. A missing or broken file shows everything.
+# Segments named on a "hide = a, b" line in ~/.claude/claude-statusline.conf
+# (or $env:STATUSLINE_CONFIG) are skipped, not just blanked, so hiding "energy"
+# also skips the transcript parse. "#" starts a comment. No file shows
+# everything.
 $__config = $env:STATUSLINE_CONFIG
 if (-not $__config) {
   $__h = $env:USERPROFILE
   if (-not $__h) { $__h = $env:HOME }
-  $__config = Join-Path $__h '.claude/statusline.json'
+  $__config = Join-Path $__h '.claude/claude-statusline.conf'
 }
 $__hidden = @()
 try {
-  $__hidden = @((Get-Content -Raw -LiteralPath $__config | ConvertFrom-Json).hide |
-    Where-Object { $_ -is [string] } | ForEach-Object { $_.ToLowerInvariant() })
+  foreach ($__l in [System.IO.File]::ReadAllLines($__config)) {
+    if ($__l -match '^\s*hide\s*=([^#]*)') {
+      $__hidden += @($Matches[1].Split(',') | ForEach-Object { $_.Trim().ToLowerInvariant() } | Where-Object { $_ })
+    }
+  }
 } catch {}
 function __shown([string]$name) { return $script:__hidden -notcontains $name }
 
