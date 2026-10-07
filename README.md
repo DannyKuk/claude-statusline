@@ -30,16 +30,16 @@ Segment names: `model`, `folder`, `branch`, `5h`, `ctx`, `team`, `energy` (case 
 curl -fsSL https://raw.githubusercontent.com/DannyKuk/claude-statusline/main/claude-statusline.conf -o ~/.claude/claude-statusline.conf
 ```
 
-### `/slsettings` skill
+### `/slconfig` skill
 
-Or let Claude edit the file: the [`slsettings`](skills/slsettings/SKILL.md) skill adds `/slsettings` (lists segments as on/off), `/slsettings hide energy team` and `/slsettings show team`, and also handles plain requests like "hide the energy segment". It creates the file from the template when needed.
+Or let Claude edit the file: the [`slconfig`](skills/slconfig/SKILL.md) skill adds `/slconfig` (lists segments as on/off), `/slconfig hide energy team` and `/slconfig show team`, and also handles plain requests like "hide the energy segment". It creates the file from the template when needed.
 
 ```sh
-mkdir -p ~/.claude/skills/slsettings
-curl -fsSL https://raw.githubusercontent.com/DannyKuk/claude-statusline/main/skills/slsettings/SKILL.md -o ~/.claude/skills/slsettings/SKILL.md
+mkdir -p ~/.claude/skills/slconfig
+curl -fsSL https://raw.githubusercontent.com/DannyKuk/claude-statusline/main/skills/slconfig/SKILL.md -o ~/.claude/skills/slconfig/SKILL.md
 ```
 
-On Windows, copy `skills\slsettings\SKILL.md` to `%USERPROFILE%\.claude\skills\slsettings\SKILL.md`.
+On Windows, copy `skills\slconfig\SKILL.md` to `%USERPROFILE%\.claude\skills\slconfig\SKILL.md`.
 
 ## Install
 

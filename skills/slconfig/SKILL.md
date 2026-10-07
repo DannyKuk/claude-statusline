@@ -1,6 +1,6 @@
 ---
-name: slsettings
-description: Use when the user runs /slsettings, or asks to show, hide, list or turn on/off segments of the claude-statusline status line (model, folder, branch, 5h, ctx, team, energy).
+name: slconfig
+description: Use when the user runs /slconfig, or asks to show, hide, list or turn on/off segments of the claude-statusline status line (model, folder, branch, 5h, ctx, team, energy).
 argument-hint: "[hide|show <segment>...]"
 ---
 
@@ -36,10 +36,10 @@ is not one. No file, or an empty `hide =`, shows everything.
 
 ## Commands
 
-- **`/slsettings`** (no arguments): read the file and list every segment as
+- **`/slconfig`** (no arguments): read the file and list every segment as
   on or off. If the file doesn't exist, everything is on; don't create it.
-- **`/slsettings hide <segment>...`** adds segments to the hidden set;
-  **`/slsettings show <segment>...`** removes them from it. Other hidden
+- **`/slconfig hide <segment>...`** adds segments to the hidden set;
+  **`/slconfig show <segment>...`** removes them from it. Other hidden
   segments stay as they are.
 - Plain requests ("hide the energy thing", "turn the 5 hour limit back on")
   map to the same actions, using the table to turn descriptions into names.
