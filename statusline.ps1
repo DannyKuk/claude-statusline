@@ -180,14 +180,29 @@ function __tokensPctInt() {
   $p = __field 'context_window.used_percentage'
   return [string](__normInt $p)
 }
-function __gitBranch() {
+# Branch name plus its state, as a coloured segment: "*" for uncommitted
+# changes (untracked files included), and up/down arrows for commits ahead of/
+# behind the upstream as of the last fetch. One status call covers both;
+# --no-optional-locks keeps a refresh from contending with git commands Claude
+# runs at the same moment.
+function __branchSeg() {
   $cwd = __field 'workspace.current_dir'
   if (-not $cwd) { $cwd = __field 'cwd' }
+  $b = ''; $dirty = ''; $ahead = 0; $behind = 0
   if ($cwd -and (Get-Command git -ErrorAction SilentlyContinue)) {
-    $b = & git -C "$cwd" rev-parse --abbrev-ref HEAD 2>$null
-    if ($b) { return $b.Trim() }
+    foreach ($line in @(& git --no-optional-locks -C "$cwd" status --porcelain=v2 --branch 2>$null)) {
+      if ($line -like '# branch.head *') { $b = $line.Substring(14) }
+      elseif ($line -match '^# branch\.ab \+(\d+) -(\d+)') { $ahead = [int]$Matches[1]; $behind = [int]$Matches[2] }
+      elseif ($line -and -not $line.StartsWith('#')) { $dirty = '*' }
+    }
   }
-  return __field 'workspace.git_worktree'
+  if ($b -eq '(detached)') { $b = 'HEAD' }
+  if (-not $b) { return (__seg $C_BRANCH (__field 'workspace.git_worktree')) }
+  $ab = ''
+  if ($ahead -gt 0) { $ab += [string][char]0x2191 + $ahead }
+  if ($behind -gt 0) { $ab += [string][char]0x2193 + $behind }
+  if ($ab) { $ab = ' ' + $ab }
+  return (__seg $C_BRANCH $b) + (__seg $C_DIRTY $dirty) + (__seg $C_LABEL $ab)
 }
 function __gitDirty() {
   $cwd = __field 'workspace.current_dir'
@@ -253,6 +268,7 @@ function __c([string]$codes) { if ($__NOCOLOR) { return '' } else { return $code
 $C_MODEL  = __c '38;5;80'   # turquoise - the identity anchor
 $C_DIR    = __c '38;5;252'  # near-white
 $C_BRANCH = __c '38;5;108'  # muted git green
+$C_DIRTY  = __c '38;5;215'  # soft orange - uncommitted changes
 $C_SEP    = __c '38;5;240'  # dark grey, recedes
 $C_LABEL  = __c '38;5;244'  # grey, quieter than the number it labels
 $C_TEAM   = __c '38;5;141'  # soft purple
@@ -415,7 +431,7 @@ $__parts = New-Object System.Collections.Generic.List[string]
 foreach ($__p in @(
   $(if (__shown 'model')  { __seg $C_MODEL  (__field 'model.display_name') }),
   $(if (__shown 'folder') { __seg $C_DIR    (__basename (__field 'workspace.current_dir')) }),
-  $(if (__shown 'branch') { __seg $C_BRANCH (__gitBranch) }),
+  $(if (__shown 'branch') { __branchSeg }),
   $(if (__shown '5h')     { __pctSeg $__5h (__field 'rate_limits.five_hour.used_percentage') }),
   $(if (__shown 'ctx')    { __pctSeg 'ctx' (__field 'context_window.used_percentage') }),
   $(if (__shown 'team')   { __seg $C_TEAM   (__team) }),

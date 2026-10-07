@@ -6,8 +6,9 @@ A compact status line for [Claude Code](https://claude.com/claude-code), for Win
 
 ## What it shows
 
-`model | folder | git branch | 5h rate-limit usage | context usage | team | energy`
+`model | folder | git branch + state | 5h rate-limit usage | context usage | team | energy`
 
+- The branch carries its state: `main*` has uncommitted changes (untracked files included), `↑2` / `↓3` are commits ahead of / behind the upstream as of your last fetch (the status line never fetches), e.g. `main* ↑2↓3`. It's one `git status --no-optional-locks` call per refresh.
 - The 5h label becomes a countdown to the window reset (e.g. `2h14m 37%`), falling back to `5h`.
 - Percentages: turquoise < 60%, yellow ≥ 60%, orange ≥ 80%, bold red ≥ 90%.
 - Separators are dark grey ` | `; colours are 256-colour codes; `NO_COLOR` disables colour.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Statusline script (bash port of statusline.ps1)
-# model | folder | git branch | 5h rate-limit usage | context usage | team | energy
+# model | folder | git branch + state | 5h rate-limit usage | context usage | team | energy
 input=$(cat)
 
 field() { jq -r "$1 // empty" <<<"$input" 2>/dev/null; }
@@ -22,6 +22,7 @@ c() { [ -n "$NO_COLOR" ] && echo '' || echo "$1"; }
 C_MODEL=$(c '38;5;80')    # turquoise - the identity anchor
 C_DIR=$(c '38;5;252')     # near-white
 C_BRANCH=$(c '38;5;108')  # muted git green
+C_DIRTY=$(c '38;5;215')   # soft orange - uncommitted changes
 C_SEP=$(c '38;5;240')     # dark grey, recedes
 C_LABEL=$(c '38;5;244')   # grey, quieter than the number it labels
 C_TEAM=$(c '38;5;141')    # soft purple
@@ -71,10 +72,27 @@ until_reset() {
 
 cwd=$(field '.workspace.current_dir'); [ -z "$cwd" ] && cwd=$(field '.cwd')
 
-git_branch() {
-  local b=''
-  [ -n "$cwd" ] && b=$(git -C "$cwd" rev-parse --abbrev-ref HEAD 2>/dev/null)
-  [ -n "$b" ] && echo "$b" || field '.workspace.git_worktree'
+# Branch name plus its state: "*" for uncommitted changes (untracked files
+# included), and ↑/↓ for commits ahead of/behind the upstream as of the last
+# fetch. One status call covers both; --no-optional-locks keeps a refresh from
+# contending with git commands Claude runs at the same moment.
+branch_seg() {
+  local st='' line b='' dirty='' ahead=0 behind=0 ab=''
+  [ -n "$cwd" ] && st=$(git --no-optional-locks -C "$cwd" status --porcelain=v2 --branch 2>/dev/null)
+  while IFS= read -r line; do
+    case $line in
+      '') ;;
+      '# branch.head '*) b=${line#'# branch.head '} ;;
+      '# branch.ab '*) read -r _ _ ahead behind <<<"$line"; ahead=${ahead#+}; behind=${behind#-} ;;
+      '#'*) ;;
+      *) dirty='*' ;;
+    esac
+  done <<<"$st"
+  [ "$b" = '(detached)' ] && b='HEAD'
+  if [ -z "$b" ]; then seg "$C_BRANCH" "$(field '.workspace.git_worktree')"; return; fi
+  [ "$ahead" -gt 0 ] 2>/dev/null && ab+="↑$ahead"
+  [ "$behind" -gt 0 ] 2>/dev/null && ab+="↓$behind"
+  printf '%s%s%s' "$(seg "$C_BRANCH" "$b")" "$(seg "$C_DIRTY" "$dirty")" "$(seg "$C_LABEL" "${ab:+ $ab}")"
 }
 
 # Claude org from the local login (not in the statusline JSON). Team/Enterprise
@@ -148,7 +166,7 @@ label_5h=$(until_reset "$(field '.rate_limits.five_hour.resets_at')")
 parts=(
   "$(shown model  && seg "$C_MODEL" "$(field '.model.display_name')")"
   "$(shown folder && seg "$C_DIR" "$(basename "$cwd" 2>/dev/null)")"
-  "$(shown branch && seg "$C_BRANCH" "$(git_branch)")"
+  "$(shown branch && branch_seg)"
   "$(shown 5h     && pct_seg "$label_5h" "$(field '.rate_limits.five_hour.used_percentage')")"
   "$(shown ctx    && pct_seg 'ctx' "$(field '.context_window.used_percentage')")"
   "$(shown team   && seg "$C_TEAM" "$(team)")"
