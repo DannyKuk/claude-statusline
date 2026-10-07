@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Statusline script (bash port of statusline.ps1)
-# model | folder | git branch | 5h rate-limit usage | context usage | team
+# model | folder | git branch | 5h rate-limit usage | context usage | team | energy
 input=$(cat)
 
 field() { jq -r "$1 // empty" <<<"$input" 2>/dev/null; }
@@ -13,6 +13,7 @@ C_BRANCH=$(c '38;5;108')  # muted git green
 C_SEP=$(c '38;5;240')     # dark grey, recedes
 C_LABEL=$(c '38;5;244')   # grey, quieter than the number it labels
 C_TEAM=$(c '38;5;141')    # soft purple
+C_ENERGY=$(c '38;5;179')  # soft amber
 
 ESC=$'\033'
 seg() {
@@ -73,6 +74,62 @@ team() {
       else "Personal" end' "$HOME/.claude.json" 2>/dev/null
 }
 
+# Rough electricity use of this session, in Wh. Not a measurement: Anthropic
+# publishes no energy figures, so this applies public per-token estimates
+# (Google/OpenAI disclosures, Epoch AI, TokenPowerBench) to the token counts in
+# the session transcript, subagent transcripts included. Treat it as an order
+# of magnitude. Cached by total transcript size so an idle refresh doesn't
+# re-parse a long session.
+energy_wh() {
+  local t; t=$(field '.transcript_path')
+  [ -f "$t" ] || return
+  local files=("$t") f size=0
+  while IFS= read -r f; do files+=("$f"); done < <(find "${t%.jsonl}" -name '*.jsonl' 2>/dev/null)
+  for f in "${files[@]}"; do size=$(( size + $(wc -c <"$f") )); done
+
+  local sid; sid=$(field '.session_id')
+  local cache="${TMPDIR:-/tmp}/statusline-energy-${sid:-x}.txt" csize cwh
+  if read -r csize cwh 2>/dev/null <"$cache" && [ "$csize" = "$size" ] && [ -n "$cwh" ]; then
+    echo "$cwh"; return
+  fi
+
+  # kWh per million tokens for an Opus-class model, including data-centre
+  # overhead (PUE). Output (decode) dominates; prefill is far cheaper per token
+  # and cache reads skip most of the compute. Smaller models scale down. A
+  # streamed response can be logged more than once, so the last entry per
+  # message id wins.
+  local wh
+  wh=$(jq -nR --arg fallback "$(field '.model.id')" '
+    def scale: ascii_downcase
+      | if test("haiku") then 0.25 elif test("sonnet") then 0.5
+        elif test("fable|mythos") then 1.5 else 1 end;
+    reduce (inputs | fromjson? | select(.type == "assistant" and (.message.usage | type) == "object")) as $e
+      ({}; .[$e.message.id // $e.uuid // ""] = $e.message)
+    | [.[] | .usage as $u
+        | ( ($u.output_tokens // 0) * 1.0
+          + ($u.input_tokens // 0) * 0.2
+          + ($u.cache_creation_input_tokens // 0) * 0.25
+          + ($u.cache_read_input_tokens // 0) * 0.02 ) / 1000
+          * (if (.model // "") == "" then $fallback else .model end | scale)]
+    | add // 0' "${files[@]}" 2>/dev/null) || return
+  echo "$size $wh" >"$cache" 2>/dev/null
+  echo "$wh"
+}
+
+# "⚡ ~12 Wh est. (≈0.8 🔋)", the battery being a ~15 Wh smartphone charge.
+energy_seg() {
+  local wh; wh=$(energy_wh)
+  [ -z "$wh" ] && return
+  # LC_ALL=C keeps a "." decimal point under locales that use ",".
+  local amt phones
+  amt=$(LC_ALL=C awk -v w="$wh" 'BEGIN {
+    if (w >= 1000) printf "%.2f kWh", w / 1000
+    else if (w >= 10) printf "%.0f Wh", w
+    else printf "%.1f Wh", w }')
+  phones=$(LC_ALL=C awk -v w="$wh" 'BEGIN { printf "%.1f", w / 15 }')
+  printf '%s%s' "$(seg "$C_ENERGY" "⚡ ~$amt")" "$(seg "$C_LABEL" " est. (≈$phones 🔋)")"
+}
+
 label_5h=$(until_reset "$(field '.rate_limits.five_hour.resets_at')")
 [ -z "$label_5h" ] && label_5h='5h'
 
@@ -83,6 +140,7 @@ parts=(
   "$(pct_seg "$label_5h" "$(field '.rate_limits.five_hour.used_percentage')")"
   "$(pct_seg 'ctx' "$(field '.context_window.used_percentage')")"
   "$(seg "$C_TEAM" "$(team)")"
+  "$(energy_seg)"
 )
 
 sep=$(seg "$C_SEP" ' | ')
