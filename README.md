@@ -6,10 +6,11 @@ https://github.com/user-attachments/assets/873068f4-a392-4352-8bb1-3698f6a45306
 
 ## What it shows
 
-`model | folder | git branch + state | 5h rate-limit usage | context usage | team | energy`
+`model | folder | git branch + state | 5h rate-limit usage | weekly limit | context usage | team | energy`
 
 - The branch carries its state: `main*` has uncommitted changes (untracked files included), `↑2` / `↓3` are commits ahead of / behind the upstream as of your last fetch (the status line never fetches), e.g. `main* ↑2↓3`. It's one `git status --no-optional-locks` call per refresh.
 - The 5h label becomes a countdown to the window reset (e.g. `2h14m 37%`), falling back to `5h`.
+- The weekly limit only appears once it reaches 80% (e.g. `7d 84%`), as a warning that you're getting close. Below that it stays out of the way.
 - Percentages: turquoise < 60%, yellow ≥ 60%, orange ≥ 80%, bold red ≥ 90%.
 - Separators are dark grey ` | `; colours are 256-colour codes; `NO_COLOR` disables colour.
 - Team is your Claude organization name on Team/Enterprise plans, and `Personal` on personal plans (Pro, Max, ...), whose orgs are auto-named `<email>'s Organization`. It's read from `oauthAccount.organizationName` / `organizationType` in `~/.claude.json` (it isn't in the status line JSON), and dropped when logged out or using an API key.
@@ -25,7 +26,7 @@ Optional. To turn segments off, copy [`claude-statusline.conf`](claude-statuslin
 hide = energy, team
 ```
 
-Segment names: `model`, `folder`, `branch`, `5h`, `ctx`, `team`, `energy` (case doesn't matter; `#` starts a comment). Hidden segments aren't computed at all, so hiding `energy` also skips reading the transcript. Without the file everything is shown. Changes apply on the next refresh. `STATUSLINE_CONFIG=<path>` reads a different file.
+Segment names: `model`, `folder`, `branch`, `5h`, `weekly`, `ctx`, `team`, `energy` (case doesn't matter; `#` starts a comment). Hidden segments aren't computed at all, so hiding `energy` also skips reading the transcript. Without the file everything is shown. Changes apply on the next refresh. `STATUSLINE_CONFIG=<path>` reads a different file.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/DannyKuk/claude-statusline/main/claude-statusline.conf -o ~/.claude/claude-statusline.conf

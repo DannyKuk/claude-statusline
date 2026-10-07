@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Statusline script (bash port of statusline.ps1)
-# model | folder | git branch + state | 5h rate-limit usage | context usage | team | energy
+# model | folder | git branch + state | 5h rate-limit usage | weekly limit (from 80%) | context usage | team | energy
 input=$(cat)
 
 field() { jq -r "$1 // empty" <<<"$input" 2>/dev/null; }
@@ -160,6 +160,14 @@ energy_seg() {
   printf '%s%s' "$(seg "$C_ENERGY" "⚡ ~$amt")" "$(seg "$C_LABEL" " est. (≈$phones 🔋)")"
 }
 
+# The weekly limit only shows from 80%, as a "getting close" warning: halfway
+# through the week is normal and not worth the space. No reset time, since
+# it's the 5h window that stops a session.
+weekly_seg() {
+  local p; p=$(field '.rate_limits.seven_day.used_percentage')
+  [ -n "$p" ] && [ "$(norm_int "$p")" -ge 80 ] && pct_seg '7d' "$p"
+}
+
 label_5h=$(until_reset "$(field '.rate_limits.five_hour.resets_at')")
 [ -z "$label_5h" ] && label_5h='5h'
 
@@ -168,6 +176,7 @@ parts=(
   "$(shown folder && seg "$C_DIR" "$(basename "$cwd" 2>/dev/null)")"
   "$(shown branch && branch_seg)"
   "$(shown 5h     && pct_seg "$label_5h" "$(field '.rate_limits.five_hour.used_percentage')")"
+  "$(shown weekly && weekly_seg)"
   "$(shown ctx    && pct_seg 'ctx' "$(field '.context_window.used_percentage')")"
   "$(shown team   && seg "$C_TEAM" "$(team)")"
   "$(shown energy && energy_seg)"

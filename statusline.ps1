@@ -427,12 +427,22 @@ function __energySeg() {
 $__5h = __untilReset (__field 'rate_limits.five_hour.resets_at')
 if (-not $__5h) { $__5h = '5h' }
 
+# The weekly limit only shows from 80%, as a "getting close" warning: halfway
+# through the week is normal and not worth the space. No reset time, since
+# it's the 5h window that stops a session.
+function __weeklySeg {
+  $raw = __field 'rate_limits.seven_day.used_percentage'
+  if ([string]::IsNullOrEmpty($raw) -or (__normInt $raw) -lt 80) { return '' }
+  return (__pctSeg '7d' $raw)
+}
+
 $__parts = New-Object System.Collections.Generic.List[string]
 foreach ($__p in @(
   $(if (__shown 'model')  { __seg $C_MODEL  (__field 'model.display_name') }),
   $(if (__shown 'folder') { __seg $C_DIR    (__basename (__field 'workspace.current_dir')) }),
   $(if (__shown 'branch') { __branchSeg }),
   $(if (__shown '5h')     { __pctSeg $__5h (__field 'rate_limits.five_hour.used_percentage') }),
+  $(if (__shown 'weekly') { __weeklySeg }),
   $(if (__shown 'ctx')    { __pctSeg 'ctx' (__field 'context_window.used_percentage') }),
   $(if (__shown 'team')   { __seg $C_TEAM   (__team) }),
   $(if (__shown 'energy') { __energySeg })
