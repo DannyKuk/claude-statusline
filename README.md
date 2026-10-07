@@ -4,6 +4,8 @@ A compact status line for [Claude Code](https://claude.com/claude-code), for Win
 
 ![Status line in Claude Code](screenshot.png)
 
+<!-- Demo video (26 s, with sound): edit this file on GitHub and drag claude-statusline-demo.mp4 onto this line. GitHub uploads it and replaces it with the video link. -->
+
 ## What it shows
 
 `model | folder | git branch + state | 5h rate-limit usage | context usage | team | energy`
