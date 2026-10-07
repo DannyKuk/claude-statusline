@@ -258,6 +258,23 @@ $C_LABEL  = __c '38;5;244'  # grey, quieter than the number it labels
 $C_TEAM   = __c '38;5;141'  # soft purple
 $C_ENERGY = __c '38;5;179'  # soft amber
 
+# ---- settings -------------------------------------------------------------
+# Segments named under "hide" in ~/.claude/statusline.json (or
+# $env:STATUSLINE_CONFIG) are skipped, not just blanked, so hiding "energy"
+# also skips the transcript parse. A missing or broken file shows everything.
+$__config = $env:STATUSLINE_CONFIG
+if (-not $__config) {
+  $__h = $env:USERPROFILE
+  if (-not $__h) { $__h = $env:HOME }
+  $__config = Join-Path $__h '.claude/statusline.json'
+}
+$__hidden = @()
+try {
+  $__hidden = @((Get-Content -Raw -LiteralPath $__config | ConvertFrom-Json).hide |
+    Where-Object { $_ -is [string] } | ForEach-Object { $_.ToLowerInvariant() })
+} catch {}
+function __shown([string]$name) { return $script:__hidden -notcontains $name }
+
 # Used-percentage ramp: turquoise while healthy, warming to red at the wall.
 # Thresholds read as USED, so for both figures higher is worse.
 function __pctColor([int]$p) {
@@ -392,13 +409,13 @@ if (-not $__5h) { $__5h = '5h' }
 
 $__parts = New-Object System.Collections.Generic.List[string]
 foreach ($__p in @(
-  (__seg $C_MODEL  (__field 'model.display_name')),
-  (__seg $C_DIR    (__basename (__field 'workspace.current_dir'))),
-  (__seg $C_BRANCH (__gitBranch)),
-  (__pctSeg $__5h (__field 'rate_limits.five_hour.used_percentage')),
-  (__pctSeg 'ctx' (__field 'context_window.used_percentage')),
-  (__seg $C_TEAM   (__team)),
-  (__energySeg)
+  $(if (__shown 'model')  { __seg $C_MODEL  (__field 'model.display_name') }),
+  $(if (__shown 'folder') { __seg $C_DIR    (__basename (__field 'workspace.current_dir')) }),
+  $(if (__shown 'branch') { __seg $C_BRANCH (__gitBranch) }),
+  $(if (__shown '5h')     { __pctSeg $__5h (__field 'rate_limits.five_hour.used_percentage') }),
+  $(if (__shown 'ctx')    { __pctSeg 'ctx' (__field 'context_window.used_percentage') }),
+  $(if (__shown 'team')   { __seg $C_TEAM   (__team) }),
+  $(if (__shown 'energy') { __energySeg })
 )) { if ($__p) { $__parts.Add($__p) } }
 
 __write ($__parts -join (__seg $C_SEP ' | '))

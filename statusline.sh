@@ -5,6 +5,14 @@ input=$(cat)
 
 field() { jq -r "$1 // empty" <<<"$input" 2>/dev/null; }
 
+# ---- settings -------------------------------------------------------------
+# Segments named under "hide" in ~/.claude/statusline.json (or
+# $STATUSLINE_CONFIG) are skipped, not just blanked, so hiding "energy" also
+# skips the transcript parse. A missing or broken file shows everything.
+config=${STATUSLINE_CONFIG:-$HOME/.claude/statusline.json}
+hidden=$'\n'$(jq -r '[.hide] | flatten | .[] | strings | ascii_downcase' "$config" 2>/dev/null)$'\n'
+shown() { [[ $hidden != *$'\n'"$1"$'\n'* ]]; }
+
 # ---- palette (256-colour; NO_COLOR disables) ------------------------------
 c() { [ -n "$NO_COLOR" ] && echo '' || echo "$1"; }
 C_MODEL=$(c '38;5;80')    # turquoise - the identity anchor
@@ -134,13 +142,13 @@ label_5h=$(until_reset "$(field '.rate_limits.five_hour.resets_at')")
 [ -z "$label_5h" ] && label_5h='5h'
 
 parts=(
-  "$(seg "$C_MODEL" "$(field '.model.display_name')")"
-  "$(seg "$C_DIR" "$(basename "$cwd" 2>/dev/null)")"
-  "$(seg "$C_BRANCH" "$(git_branch)")"
-  "$(pct_seg "$label_5h" "$(field '.rate_limits.five_hour.used_percentage')")"
-  "$(pct_seg 'ctx' "$(field '.context_window.used_percentage')")"
-  "$(seg "$C_TEAM" "$(team)")"
-  "$(energy_seg)"
+  "$(shown model  && seg "$C_MODEL" "$(field '.model.display_name')")"
+  "$(shown folder && seg "$C_DIR" "$(basename "$cwd" 2>/dev/null)")"
+  "$(shown branch && seg "$C_BRANCH" "$(git_branch)")"
+  "$(shown 5h     && pct_seg "$label_5h" "$(field '.rate_limits.five_hour.used_percentage')")"
+  "$(shown ctx    && pct_seg 'ctx' "$(field '.context_window.used_percentage')")"
+  "$(shown team   && seg "$C_TEAM" "$(team)")"
+  "$(shown energy && energy_seg)"
 )
 
 sep=$(seg "$C_SEP" ' | ')
