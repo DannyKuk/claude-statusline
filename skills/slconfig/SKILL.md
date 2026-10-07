@@ -1,7 +1,7 @@
 ---
 name: slconfig
 description: Use when the user runs /slconfig, or asks to show, hide, list or turn on/off segments of the claude-statusline status line (model, folder, branch, 5h, ctx, team, energy).
-argument-hint: "[hide|show <segment>...]"
+argument-hint: "[segment...]"
 ---
 
 # claude-statusline settings
@@ -38,18 +38,26 @@ is not one. No file, or an empty `hide =`, shows everything.
 
 - **`/slconfig`** (no arguments): read the file and list every segment as
   on or off. If the file doesn't exist, everything is on; don't create it.
-- **`/slconfig hide <segment>...`** adds segments to the hidden set;
-  **`/slconfig show <segment>...`** removes them from it. Other hidden
-  segments stay as they are.
-- Plain requests ("hide the energy thing", "turn the 5 hour limit back on")
-  map to the same actions, using the table to turn descriptions into names.
+- **`/slconfig <segment>...`** toggles each named segment: hidden ones
+  come back, shown ones are hidden. Other segments stay as they are.
+- Plain requests say which way ("hide the energy thing", "turn the 5 hour
+  limit back on"), so they only hide or only show, never toggle. The same
+  goes for arguments like `/slconfig hide energy`. A segment already in the
+  requested state stays as it is.
 
 ## Updating the file
 
 1. Map each requested segment to a name from the table (case-insensitive;
    "5 hour limit" is `5h`, "context" is `ctx`). If any can't be mapped, change
    nothing and create nothing: say which are unknown and list the valid names.
-2. If the file is missing, create it with this template first:
+   A segment named twice counts once.
+2. Read the current hidden set from all `hide` lines (lower-cased, unknown
+   names dropped; no file means nothing hidden), then apply the toggle, hide
+   or show.
+3. If the hidden set didn't change, write nothing and create nothing; say the
+   segments were already in that state and give only the on/off line from
+   step 6.
+4. If the file is missing, create it with this template first:
 
    ```ini
    # Settings for claude-statusline
@@ -60,12 +68,10 @@ is not one. No file, or an empty `hide =`, shows everything.
    hide =
    ```
 
-3. Read the current hidden set from all `hide` lines (lower-cased, unknown
-   names dropped), then add or remove the requested segments.
-4. Write it as `hide = a, b` in table order. It replaces the first `hide` line,
+5. Write the new hidden set as `hide = a, b` in table order. It replaces the first `hide` line,
    inline comment included; delete any other `hide` lines; leave every other
    line exactly as it is. No `hide` line yet: append one. Showing everything
    leaves `hide =` empty; keep the file.
-5. Reply with all seven segments as on/off in one line (e.g.
+6. Reply with all seven segments as on/off in one line (e.g.
    `model on · ... · energy off`), and that it applies on the status line's
    next refresh.

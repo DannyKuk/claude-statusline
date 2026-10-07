@@ -32,7 +32,7 @@ curl -fsSL https://raw.githubusercontent.com/DannyKuk/claude-statusline/main/cla
 
 ### `/slconfig` skill
 
-Or let Claude edit the file: the [`slconfig`](skills/slconfig/SKILL.md) skill adds `/slconfig` (lists segments as on/off), `/slconfig hide energy team` and `/slconfig show team`, and also handles plain requests like "hide the energy segment". It creates the file from the template when needed.
+Or let Claude edit the file: the [`slconfig`](skills/slconfig/SKILL.md) skill adds `/slconfig` (lists segments as on/off) and `/slconfig energy` (toggles energy; name several to toggle each), and also handles plain requests like "hide the energy segment". It creates the file from the template when needed.
 
 ```sh
 mkdir -p ~/.claude/skills/slconfig
