@@ -43,6 +43,12 @@ On Windows, copy `skills\slconfig\SKILL.md` to `%USERPROFILE%\.claude\skills\slc
 
 ## Install
 
+The easiest way is to ask Claude Code, e.g.:
+
+> Install the status line from https://github.com/DannyKuk/claude-statusline, including the /slconfig skill.
+
+Or do it by hand:
+
 ### macOS / Linux (bash)
 
 Requires `jq` (preinstalled on recent macOS; otherwise `brew install jq`).
